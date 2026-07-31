@@ -3,3 +3,12 @@ build/
 
 # pipeline output
 analysis/
+
+# JetBrains IDEs
+.idea/
+
+# VS Code
+.vscode/
+
+# Zed
+.zed/
