@@ -4,6 +4,12 @@ build/
 # pipeline output
 analysis/
 
+# venv
+.venv/
+
+# mamba
+.mamba/
+
 # JetBrains IDEs
 .idea/
 
