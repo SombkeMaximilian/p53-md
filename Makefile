@@ -31,13 +31,8 @@ PNAME   ?= NA
 NNAME   ?= CL
 EM_MDP  := mdp/em.mdp
 
-REPS       ?= 2
-REP_IDS    := $(shell seq 1 $(REPS))
-INIT_CONFS := $(foreach r,$(REP_IDS),$(BUILD)/rep$(r)/init_conf.pdb)
-TOPOLS     := $(foreach r,$(REP_IDS),$(BUILD)/rep$(r)/topol.top)
-SOLVS      := $(foreach r,$(REP_IDS),$(BUILD)/rep$(r)/ions.gro)
-EM         := $(foreach r,$(REP_IDS),$(BUILD)/rep$(r)/em.gro)
-
+REPS        ?= 2
+REP_IDS     := $(shell seq 1 $(REPS))
 PDB2GMX_OUT := topol.top init_conf.gro posre.itp clean.pdb
 
 .PHONY: setup sequence conformers topology solvate minimize clean distclean
@@ -64,13 +59,13 @@ $(BUILD)/seq.fasta: $(P53FASTA) src/extract_construct.py | $(VENV)/.stamp
 	@mkdir -p $(@D)
 	$(PYTHON) src/extract_construct.py --fasta $< --range $(CONSTRUCT) --out $@
 
-conformers: $(INIT_CONFS)
+conformers: $(foreach r,$(REP_IDS),$(BUILD)/rep$(r)/init_conf.pdb)
 
 $(BUILD)/rep%/init_conf.pdb: $(BUILD)/seq.fasta src/build_conformer.py | $(VENV)/.stamp
 	@mkdir -p $(@D)
 	$(PYTHON) src/build_conformer.py --seq $< --out $@ --seed $*
 
-topology: $(TOPOLS)
+topology: $(foreach r,$(REP_IDS),$(BUILD)/rep$(r)/topol.top)
 
 $(addprefix $(BUILD)/rep%/,$(PDB2GMX_OUT)) &: $(BUILD)/rep%/init_conf.pdb $(FF_STAMP)
 	cd $(@D) && $(GMX) pdb2gmx \
@@ -87,7 +82,7 @@ $(addprefix $(BUILD)/rep%/,$(PDB2GMX_OUT)) &: $(BUILD)/rep%/init_conf.pdb $(FF_S
 		2>&1 | tee pdb2gmx.log
 	@grep -q 'Opening force field file' $(@D)/pdb2gmx.log
 
-solvate: $(SOLVS)
+solvate: $(foreach r,$(REP_IDS),$(BUILD)/rep$(r)/ions.gro)
 
 $(BUILD)/rep%/box.gro: $(BUILD)/rep%/init_conf.gro
 	$(GMX) editconf \
@@ -126,7 +121,7 @@ $(BUILD)/rep%/ions.gro $(BUILD)/rep%/ions.top &: $(BUILD)/rep%/ions.tpr $(BUILD)
 	    -neutral \
 	    -conc $(CONC)
 
-minimize: $(EM)
+minimize: $(foreach r,$(REP_IDS),$(BUILD)/rep$(r)/em.gro)
 
 $(BUILD)/rep%/em.tpr: $(BUILD)/rep%/ions.gro $(BUILD)/rep%/ions.top $(EM_MDP)
 	$(GMX) grompp -f $(EM_MDP) -c $< -p $(@D)/ions.top -o $@ -po $(@D)/mdout_em.mdp
