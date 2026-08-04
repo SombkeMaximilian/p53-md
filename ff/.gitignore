@@ -1,0 +1,11 @@
+# Everything downloaded here
+*
+
+# gitignore
+!.gitignore
+
+# README
+!README.md
+
+# Download script
+!download.sh
