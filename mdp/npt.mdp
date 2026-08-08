@@ -1,0 +1,45 @@
+; NPT equilibration
+; box volume should probably plateau here
+
+integrator              = md
+dt                      = 0.002
+nsteps                  = 250000 ; 500 ps
+define                  = -DPOSRES
+
+nstxout-compressed      = 5000
+nstlog                  = 5000
+nstenergy               = 500 ; for the volume trace
+
+continuation            = yes
+constraint-algorithm    = lincs
+constraints             = h-bonds
+lincs-iter              = 1
+lincs-order             = 4
+
+cutoff-scheme           = Verlet
+nstlist                 = 20
+pbc                     = xyz
+
+coulombtype             = PME
+rcoulomb                = 1.0
+fourierspacing          = 0.12
+pme-order               = 4
+
+vdwtype                 = cutoff
+vdw-modifier            = potential-shift-verlet
+rvdw                    = 1.0
+DispCorr                = EnerPres
+
+tcoupl                  = V-rescale
+tc-grps                 = System
+tau-t                   = 0.1
+ref-t                   = 300
+
+pcoupl                  = C-rescale
+pcoupltype              = isotropic
+tau-p                   = 2.0
+ref-p                   = 1.0
+compressibility         = 4.5e-5
+refcoord-scaling        = com
+
+gen-vel                 = no

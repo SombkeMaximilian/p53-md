@@ -1,0 +1,42 @@
+; NVT equilibration
+; @SEED@ is inserted by the Makefile
+
+integrator              = md
+dt                      = 0.002
+nsteps                  = 50000 ; 100 ps
+define                  = -DPOSRES
+
+nstxout-compressed      = 5000
+nstlog                  = 5000
+nstenergy               = 5000
+
+continuation            = no
+constraint-algorithm    = lincs
+constraints             = h-bonds
+lincs-iter              = 1
+lincs-order             = 4
+
+cutoff-scheme           = Verlet
+nstlist                 = 20
+pbc                     = xyz
+
+coulombtype             = PME
+rcoulomb                = 1.0
+fourierspacing          = 0.12
+pme-order               = 4
+
+vdwtype                 = cutoff
+vdw-modifier            = potential-shift-verlet
+rvdw                    = 1.0
+DispCorr                = EnerPres
+
+tcoupl                  = V-rescale
+tc-grps                 = System
+tau-t                   = 0.1
+ref-t                   = 300
+
+pcoupl                  = no
+
+gen-vel                 = yes
+gen-temp                = 300
+gen-seed                = @SEED@
