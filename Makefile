@@ -8,7 +8,8 @@ VENV        := .venv
 PYTHON_DEPS := deps/requirements.txt
 PYTHON      ?= $(VENV)/bin/python3
 
-GMX ?= gmx
+GMX                  ?= gmx
+MDRUN_FLAGS          ?=
 export GMX_MAXBACKUP := -1
 
 LOCAL_FF ?= ff
@@ -38,7 +39,7 @@ NVT_MDP  := mdp/nvt.mdp
 NPT_MDP  := mdp/npt.mdp
 PROD_MDP := mdp/prod.mdp
 
-.PHONY: setup topology solvate minimize clean distclean
+.PHONY: setup topology solvate minimize equilibrate clean distclean
 
 setup: $(VENV)/.stamp $(FF_STAMP)
 
@@ -123,10 +124,53 @@ $(BUILD)/rep%/ions.gro $(BUILD)/rep%/ions.top &: $(BUILD)/rep%/ions.tpr $(BUILD)
 minimize: $(foreach r,$(REP_IDS),$(BUILD)/rep$(r)/em.gro)
 
 $(BUILD)/rep%/em.tpr: $(BUILD)/rep%/ions.gro $(BUILD)/rep%/ions.top $(EM_MDP)
-	$(GMX) grompp -f $(EM_MDP) -c $< -p $(@D)/ions.top -o $@ -po $(@D)/mdout_em.mdp
+	$(GMX) grompp \
+	    -f $(EM_MDP) \
+		-c $< \
+		-p $(@D)/ions.top \
+		-o $@ \
+		-po $(@D)/mdout_em.mdp
 
 $(BUILD)/rep%/em.gro: $(BUILD)/rep%/em.tpr
-	cd $(@D) && $(GMX) mdrun -s em.tpr -deffnm em
+	cd $(@D) && $(GMX) mdrun \
+	    -s em.tpr \
+		-deffnm em
+
+equilibrate: $(foreach r,$(REP_IDS),$(BUILD)/rep$(r)/npt.gro)
+
+$(BUILD)/rep%/nvt.mdp: $(NVT_MDP)
+	sed 's/@SEED@/$*/' $< > $@
+
+$(BUILD)/rep%/nvt.tpr: $(BUILD)/rep%/em.gro $(BUILD)/rep%/ions.top $(BUILD)/rep%/nvt.mdp
+	$(GMX) grompp \
+		-f $(@D)/nvt.mdp \
+		-c $< \
+		-r $< \
+		-p $(@D)/ions.top \
+	  	-o $@ \
+		-po $(@D)/mdout_nvt.mdp
+
+$(BUILD)/rep%/nvt.gro $(BUILD)/rep%/nvt.cpt &: $(BUILD)/rep%/nvt.tpr
+	cd $(@D) && $(GMX) mdrun \
+	    -s nvt.tpr \
+		-deffnm nvt \
+		$(MDRUN_FLAGS)
+
+$(BUILD)/rep%/npt.tpr: $(BUILD)/rep%/nvt.gro $(BUILD)/rep%/nvt.cpt $(BUILD)/rep%/ions.top $(NPT_MDP)
+	$(GMX) grompp \
+	    -f $(NPT_MDP) \
+		-c $< \
+		-r $< \
+		-t $(@D)/nvt.cpt \
+	    -p $(@D)/ions.top \
+		-o $@ \
+		-po $(@D)/mdout_npt.mdp
+
+$(BUILD)/rep%/npt.gro $(BUILD)/rep%/npt.cpt &: $(BUILD)/rep%/npt.tpr
+	cd $(@D) && $(GMX) mdrun \
+	    -s npt.tpr \
+		-deffnm npt \
+		$(MDRUN_FLAGS)
 
 clean:
 	rm -rf build
