@@ -38,7 +38,7 @@ NVT_MDP  := mdp/nvt.mdp
 NPT_MDP  := mdp/npt.mdp
 PROD_MDP := mdp/prod.mdp
 
-.PHONY: setup sequence conformers topology solvate minimize clean distclean
+.PHONY: setup topology solvate minimize clean distclean
 
 setup: $(VENV)/.stamp $(FF_STAMP)
 
@@ -56,19 +56,15 @@ $(FF_STAMP): $(LOCAL_FF)/download.sh
 	done
 	@touch $@
 
-sequence: $(BUILD)/seq.fasta
+topology: $(foreach r,$(REP_IDS),$(BUILD)/rep$(r)/topol.top)
 
 $(BUILD)/seq.fasta: $(P53FASTA) src/extract_construct.py | $(VENV)/.stamp
 	@mkdir -p $(@D)
 	$(PYTHON) src/extract_construct.py --fasta $< --range $(CONSTRUCT) --out $@
 
-conformers: $(foreach r,$(REP_IDS),$(BUILD)/rep$(r)/init_conf.pdb)
-
 $(BUILD)/rep%/init_conf.pdb: $(BUILD)/seq.fasta src/build_conformer.py | $(VENV)/.stamp
 	@mkdir -p $(@D)
 	$(PYTHON) src/build_conformer.py --seq $< --out $@ --seed $*
-
-topology: $(foreach r,$(REP_IDS),$(BUILD)/rep$(r)/topol.top)
 
 $(addprefix $(BUILD)/rep%/,$(PDB2GMX_OUT)) &: $(BUILD)/rep%/init_conf.pdb $(FF_STAMP)
 	cd $(@D) && $(GMX) pdb2gmx \
