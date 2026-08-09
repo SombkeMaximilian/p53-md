@@ -1,14 +1,7 @@
 #!/usr/bin/env python3
 
 """
-Builds a random-coil starting conformer for a construct, ready for pdb2gmx.
-
-Backbone torsions are drawn from residue-type-aware Ramachandran basins, chi1 from
-staggered rotamers. Conformers are rejected on steric clash and on radius of
-gyration outside a window around the Flory random-coil estimate.
-
-ACE/NME caps are built by flanking the construct with glycines and stripping them
-down to the cap atoms, so cap geometry comes from the peptide build itself.
+Builds a random-coil starting conformer for a construct.
 """
 
 import argparse

@@ -28,16 +28,15 @@ WATERBOX := $(LOCAL_FF)/$(FF_DIR)/$(WATER).gro
 REPS        ?= 2
 REP_IDS     := $(shell seq 1 $(REPS))
 PDB2GMX_OUT := topol.top init_conf.gro posre.itp clean.pdb
-
-BOXD     ?= 1.2
-BOXTYPE  ?= dodecahedron
-CONC     ?= 0.15
-PNAME    ?= NA
-NNAME    ?= CL
-EM_MDP   := mdp/em.mdp
-NVT_MDP  := mdp/nvt.mdp
-NPT_MDP  := mdp/npt.mdp
-PROD_MDP := mdp/prod.mdp
+BOXD        ?= 1.2
+BOXTYPE     ?= dodecahedron
+CONC        ?= 0.15
+PNAME       ?= NA
+NNAME       ?= CL
+EM_MDP      := mdp/em.mdp
+NVT_MDP     := mdp/nvt.mdp
+NPT_MDP     := mdp/npt.mdp
+PROD_MDP    := mdp/prod.mdp
 
 .PHONY: setup topology solvate minimize equilibrate clean distclean
 
