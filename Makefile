@@ -172,6 +172,24 @@ $(BUILD)/rep%/npt.gro $(BUILD)/rep%/npt.cpt &: $(BUILD)/rep%/npt.tpr
 		-deffnm npt \
 		$(MDRUN_FLAGS)
 
+
+produce: $(foreach r,$(REP_IDS),$(BUILD)/rep$(r)/production.gro)
+
+$(BUILD)/rep%/production.tpr: $(BUILD)/rep%/npt.gro $(BUILD)/rep%/npt.cpt $(BUILD)/rep%/ions.top $(PROD_MDP)
+	$(GMX) grompp \
+	    -f $(PROD_MDP) \
+		-c $< \
+		-t $(@D)/npt.cpt \
+	    -p $(@D)/ions.top \
+		-o $@ \
+		-po $(@D)/mdout_production.mdp
+
+$(BUILD)/rep%/production.gro: $(BUILD)/rep%/production.tpr
+	cd $(@D) && $(GMX) mdrun \
+	    -s production.tpr \
+		-deffnm production \
+		$(MDRUN_FLAGS)
+
 clean:
 	rm -rf build
 
