@@ -134,7 +134,8 @@ $(BUILD)/rep%/em.tpr: $(BUILD)/rep%/ions.gro $(BUILD)/rep%/ions.top $(EM_MDP)
 $(BUILD)/rep%/em.gro: $(BUILD)/rep%/em.tpr
 	cd $(@D) && $(GMX) mdrun \
 	    -s em.tpr \
-		-deffnm em
+		-deffnm em \
+		$(MDRUN_FLAGS)
 
 equilibrate: $(foreach r,$(REP_IDS),$(BUILD)/rep$(r)/npt.gro)
 
