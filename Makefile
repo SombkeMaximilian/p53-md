@@ -12,8 +12,8 @@ GMX                  ?= gmx
 MDRUN_FLAGS          ?=
 export GMX_MAXBACKUP := -1
 
-LOCAL_FF ?= ff
-FF_STAMP ?= $(LOCAL_FF)/.stamp
+LOCAL_FF      ?= ff
+FF_STAMP      ?= $(LOCAL_FF)/.stamp
 export GMXLIB := $(CURDIR)/$(LOCAL_FF)
 
 P53FASTA  := data/p53.fasta
@@ -44,7 +44,6 @@ PLOT_FMT      ?= svg
 ANALYSIS_OUT  := gyrate.xvg polystat.xvg mindist.xvg energy.xvg dssp.dat
 PLOTS         := rg e2e mindist temp dens pres
 RESULTS       := $(addsuffix .$(PLOT_FMT),$(PLOTS)) summary.txt
-SUMMARIES     := $(foreach r,$(REP_IDS),$(BUILD)/rep$(r)/analysis/summary.txt)
 
 .PHONY: setup topology solvate minimize equilibrate produce analyze clean distclean
 
