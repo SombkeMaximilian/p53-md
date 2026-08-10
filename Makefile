@@ -38,7 +38,16 @@ NVT_MDP     := mdp/nvt.mdp
 NPT_MDP     := mdp/npt.mdp
 PROD_MDP    := mdp/prod.mdp
 
-.PHONY: setup topology solvate minimize equilibrate clean distclean
+ANALYSIS_SKIP ?= 0
+RVDW          ?= 1.0
+HIGHLIGHT     ?= 18-26
+PLOT_FMT      ?= svg
+ANALYSIS_OUT  := gyrate.xvg polystat.xvg mindist.xvg energy.xvg dssp.dat
+PLOTS         := rg e2e mindist temp dens pres
+RESULTS       := $(addsuffix .$(PLOT_FMT),$(PLOTS)) summary.txt
+SUMMARIES     := $(foreach r,$(REP_IDS),$(BUILD)/rep$(r)/analysis/summary.txt)
+
+.PHONY: setup topology solvate minimize equilibrate produce analyze clean distclean
 
 setup: $(VENV)/.stamp $(FF_STAMP)
 
@@ -184,11 +193,57 @@ $(BUILD)/rep%/production.tpr: $(BUILD)/rep%/npt.gro $(BUILD)/rep%/npt.cpt $(BUIL
 		-o $@ \
 		-po $(@D)/mdout_production.mdp
 
-$(BUILD)/rep%/production.gro: $(BUILD)/rep%/production.tpr
+$(addprefix $(BUILD)/rep%/production., gro xtc edr cpt) &: $(BUILD)/rep%/production.tpr
 	cd $(@D) && $(GMX) mdrun \
 	    -s production.tpr \
 		-deffnm production \
 		$(MDRUN_FLAGS)
+
+analyse: $(foreach r,$(REP_IDS),$(BUILD)/rep$(r)/analysis/summary.txt)
+
+$(BUILD)/rep%/analysis/whole.xtc: $(BUILD)/rep%/production.xtc $(BUILD)/rep%/production.tpr
+	@mkdir -p $(@D)
+	printf 'Protein\nSystem\n' | $(GMX) trjconv \
+	    -f $< \
+	    -s $(BUILD)/rep$*/production.tpr \
+	    -o $@ \
+	    -pbc mol \
+	    -center \
+	    -b $(ANALYSIS_SKIP)
+
+$(addprefix $(BUILD)/rep%/analysis/,$(ANALYSIS_OUT)) &: $(BUILD)/rep%/analysis/whole.xtc $(addprefix $(BUILD)/rep%/production., xtc edr tpr)
+	echo Protein | $(GMX) gyrate \
+	    -f $< \
+	    -s $(BUILD)/rep$*/production.tpr \
+	    -o $(@D)/gyrate.xvg
+	echo Protein | $(GMX) polystat \
+	    -f $< \
+	    -s $(BUILD)/rep$*/production.tpr \
+	    -o $(@D)/polystat.xvg
+	echo Protein | $(GMX) mindist \
+	    -f $(BUILD)/rep$*/production.xtc \
+	    -s $(BUILD)/rep$*/production.tpr \
+	    -pi \
+	    -od $(@D)/mindist.xvg \
+	    -b $(ANALYSIS_SKIP)
+	printf 'Temperature\nPressure\nVolume\nDensity\n\n' | $(GMX) energy \
+	    -f $(BUILD)/rep$*/production.edr \
+	    -o $(@D)/energy.xvg \
+	    -b $(ANALYSIS_SKIP)
+	$(GMX) dssp \
+	    -f $< \
+	    -s $(BUILD)/rep$*/production.tpr \
+	    -o $(@D)/dssp.dat
+
+$(addprefix $(BUILD)/rep%/analysis/,$(RESULTS)) &: \
+		$(addprefix $(BUILD)/rep%/analysis/,$(ANALYSIS_OUT)) \
+		src/analyze.py | $(VENV)/.stamp
+	$(PYTHON) src/analyze.py \
+	    --dir $(@D) \
+	    --outdir $(@D) \
+	    --title "p53 $(CONSTRUCT) rep$*" \
+	    --rvdw $(RVDW) \
+	    --format $(PLOT_FMT)
 
 clean:
 	rm -rf build
