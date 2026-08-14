@@ -197,7 +197,7 @@ $(addprefix $(BUILD)/rep%/production., gro xtc edr cpt) &: $(BUILD)/rep%/product
 		-deffnm production \
 		$(MDRUN_FLAGS)
 
-analyse: $(foreach r,$(REP_IDS),$(BUILD)/rep$(r)/analysis/summary.txt)
+analyze: $(foreach r,$(REP_IDS),$(BUILD)/rep$(r)/analysis/summary.txt)
 
 $(BUILD)/rep%/analysis/whole.xtc: $(BUILD)/rep%/production.xtc $(BUILD)/rep%/production.tpr
 	@mkdir -p $(@D)
