@@ -43,8 +43,20 @@ WATERBOX := $(LOCAL_FF)/$(FF_DIR)/$(WATER).gro
 REPS        ?= 2
 REP_IDS     := $(shell seq 1 $(REPS))
 PDB2GMX_OUT := topol.top init_conf.gro posre.itp clean.pdb
+
 BOXD        ?= 1.2
 BOXTYPE     ?= dodecahedron
+BOXVEC      ?=
+BOX_DAT     := $(BUILD)/box.dat
+
+ifeq ($(strip $(BOXVEC)),)
+BOX_L   = $$(cat $(BOX_DAT))
+BOX_DEP = $(BOX_DAT)
+else
+BOX_L   = $(BOXVEC)
+BOX_DEP =
+endif
+
 CONC        ?= 0.15
 PNAME       ?= NA
 NNAME       ?= CL
@@ -116,12 +128,22 @@ $(addprefix $(BUILD)/rep%/,$(PDB2GMX_OUT)) &: $(BUILD)/rep%/init_conf.pdb $(FF_S
 
 solvate: $(foreach r,$(REP_IDS),$(BUILD)/rep$(r)/ions.gro)
 
-$(BUILD)/rep%/box.gro: $(BUILD)/rep%/init_conf.gro
+$(BOX_DAT): $(foreach r,$(REP_IDS),$(BUILD)/rep$(r)/init_conf.gro) | $(BUILD)/.dir
+	@for g in $^; do \
+	  $(GMX) editconf -f $$g -o $(BUILD)/probe.gro \
+	      -bt $(BOXTYPE) -d $(BOXD) -c >/dev/null 2>&1; \
+	  tail -n 1 $(BUILD)/probe.gro | awk '{print $$1}'; \
+	done | sort -g | tail -n 1 > $@
+	@rm -f $(BUILD)/probe.gro
+	@echo "common box vector: $$(cat $@) nm ($(BOXTYPE))"
+
+$(BUILD)/rep%/box.gro: $(BUILD)/rep%/init_conf.gro $(BOX_DEP)
+	L=$(BOX_L); \
 	$(GMX) editconf \
 	    -f $< \
 	    -o $@ \
 	    -bt $(BOXTYPE) \
-	    -d $(BOXD) \
+	    -d $$L $$L $$L \
 	    -c
 
 $(BUILD)/rep%/solv.gro $(BUILD)/rep%/solv.top &: $(BUILD)/rep%/box.gro $(BUILD)/rep%/topol.top $(FF_STAMP)
