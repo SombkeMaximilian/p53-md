@@ -143,7 +143,7 @@ $(BUILD)/rep%/box.gro: $(BUILD)/rep%/init_conf.gro $(BOX_DEP)
 	    -f $< \
 	    -o $@ \
 	    -bt $(BOXTYPE) \
-	    -d $$L $$L $$L \
+	    -box $$L $$L $$L \
 	    -c
 
 $(BUILD)/rep%/solv.gro $(BUILD)/rep%/solv.top &: $(BUILD)/rep%/box.gro $(BUILD)/rep%/topol.top $(FF_STAMP)
