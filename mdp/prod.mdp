@@ -3,9 +3,9 @@
 
 integrator              = md
 dt                      = 0.002
-nsteps                  = 10000000 ; 10 ns
+nsteps                  = 10000000
 
-nstxout-compressed      = 5000 ; 10 ps
+nstxout-compressed      = 5000
 compressed-x-grps       = System
 nstlog                  = 50000
 nstenergy               = 5000
