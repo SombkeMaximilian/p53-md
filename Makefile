@@ -9,8 +9,23 @@ PYTHON_DEPS := deps/requirements.txt
 PYTHON      ?= $(VENV)/bin/python3
 
 GMX                  ?= gmx
+GMX_NT_OMP           ?= 2
+GMX_NT_MPI           ?= 1
 MDRUN_FLAGS          ?=
 export GMX_MAXBACKUP := -1
+
+GMX_PIN     ?= on
+PIN_STRIDE  ?= 1
+NCORES      ?= $(shell nproc --all)
+NT_PER_REP  := $(shell expr $(GMX_NT_MPI) \* $(GMX_NT_OMP))
+PINOFFSET    = $$(( ($* - 1) * $(NT_PER_REP) * $(PIN_STRIDE) ))
+
+ifeq ($(GMX_PIN),on)
+MDRUN_PIN = -ntmpi $(GMX_NT_MPI) -ntomp $(GMX_NT_OMP) \
+            -pin on -pinstride $(PIN_STRIDE) -pinoffset $(PINOFFSET)
+else
+MDRUN_PIN = -ntmpi $(GMX_NT_MPI) -ntomp $(GMX_NT_OMP)
+endif
 
 LOCAL_FF      ?= ff
 FF_STAMP      ?= $(LOCAL_FF)/.stamp
@@ -45,7 +60,20 @@ ANALYSIS_OUT  := gyrate.xvg polystat.xvg mindist.xvg energy.xvg dssp.dat
 PLOTS         := rg e2e mindist temp dens pres
 RESULTS       := $(addsuffix .$(PLOT_FMT),$(PLOTS)) summary.txt
 
-.PHONY: setup topology solvate minimize equilibrate produce analyze clean distclean
+.PHONY: setup \
+	topology \
+	solvate \
+	minimize \
+	equilibrate \
+	produce \
+	analyse \
+	analyze \
+    clean \
+    distclean
+
+%/.dir:
+	@mkdir -p $(@D)
+	@touch $@
 
 setup: $(VENV)/.stamp $(FF_STAMP)
 
@@ -65,27 +93,25 @@ $(FF_STAMP): $(LOCAL_FF)/download.sh
 
 topology: $(foreach r,$(REP_IDS),$(BUILD)/rep$(r)/topol.top)
 
-$(BUILD)/seq.fasta: $(P53FASTA) src/extract_construct.py | $(VENV)/.stamp
-	@mkdir -p $(@D)
+$(BUILD)/seq.fasta: $(P53FASTA) src/extract_construct.py | $(BUILD)/.dir $(VENV)/.stamp
 	$(PYTHON) src/extract_construct.py --fasta $< --range $(CONSTRUCT) --out $@
 
-$(BUILD)/rep%/init_conf.pdb: $(BUILD)/seq.fasta src/build_conformer.py | $(VENV)/.stamp
-	@mkdir -p $(@D)
+$(BUILD)/rep%/init_conf.pdb: $(BUILD)/seq.fasta src/build_conformer.py | $(BUILD)/rep%/.dir $(VENV)/.stamp
 	$(PYTHON) src/build_conformer.py --seq $< --out $@ --seed $*
 
 $(addprefix $(BUILD)/rep%/,$(PDB2GMX_OUT)) &: $(BUILD)/rep%/init_conf.pdb $(FF_STAMP)
 	cd $(@D) && $(GMX) pdb2gmx \
 	    -f init_conf.pdb \
-		-o init_conf.gro \
-		-p topol.top \
+	    -o init_conf.gro \
+	    -p topol.top \
 	    -i posre.itp \
-		-q clean.pdb \
-		-ff $(FF) \
-		-water none \
+	    -q clean.pdb \
+	    -ff $(FF) \
+	    -water none \
 	    -ignh \
-		-norenum \
+	    -norenum \
 	    -chainsep id \
-		2>&1 | tee pdb2gmx.log
+	    2>&1 | tee pdb2gmx.log
 	@grep -q 'Opening force field file' $(@D)/pdb2gmx.log
 
 solvate: $(foreach r,$(REP_IDS),$(BUILD)/rep$(r)/ions.gro)
@@ -93,10 +119,10 @@ solvate: $(foreach r,$(REP_IDS),$(BUILD)/rep$(r)/ions.gro)
 $(BUILD)/rep%/box.gro: $(BUILD)/rep%/init_conf.gro
 	$(GMX) editconf \
 	    -f $< \
-		-o $@ \
-		-bt $(BOXTYPE) \
-		-d $(BOXD) \
-		-c
+	    -o $@ \
+	    -bt $(BOXTYPE) \
+	    -d $(BOXD) \
+	    -c
 
 $(BUILD)/rep%/solv.gro $(BUILD)/rep%/solv.top &: $(BUILD)/rep%/box.gro $(BUILD)/rep%/topol.top $(FF_STAMP)
 	cp $(@D)/topol.top $(@D)/solv.top
@@ -110,11 +136,11 @@ $(BUILD)/rep%/solv.gro $(BUILD)/rep%/solv.top &: $(BUILD)/rep%/box.gro $(BUILD)/
 $(BUILD)/rep%/ions.tpr: $(BUILD)/rep%/solv.gro $(BUILD)/rep%/solv.top $(EM_MDP)
 	$(GMX) grompp \
 	    -f $(EM_MDP) \
-		-c $< \
-		-p $(@D)/solv.top \
-		-o $@ \
-		-po $(@D)/mdout_ions.mdp \
-		-maxwarn 1
+	    -c $< \
+	    -p $(@D)/solv.top \
+	    -o $@ \
+	    -po $(@D)/mdout_ions.mdp \
+	    -maxwarn 1
 
 $(BUILD)/rep%/ions.gro $(BUILD)/rep%/ions.top &: $(BUILD)/rep%/ions.tpr $(BUILD)/rep%/solv.top
 	cp $(@D)/solv.top $(@D)/ions.top
@@ -132,16 +158,17 @@ minimize: $(foreach r,$(REP_IDS),$(BUILD)/rep$(r)/em.gro)
 $(BUILD)/rep%/em.tpr: $(BUILD)/rep%/ions.gro $(BUILD)/rep%/ions.top $(EM_MDP)
 	$(GMX) grompp \
 	    -f $(EM_MDP) \
-		-c $< \
-		-p $(@D)/ions.top \
-		-o $@ \
-		-po $(@D)/mdout_em.mdp
+	    -c $< \
+	    -p $(@D)/ions.top \
+	    -o $@ \
+	    -po $(@D)/mdout_em.mdp
 
 $(BUILD)/rep%/em.gro: $(BUILD)/rep%/em.tpr
 	cd $(@D) && $(GMX) mdrun \
 	    -s em.tpr \
-		-deffnm em \
-		$(MDRUN_FLAGS)
+	    -deffnm em \
+	    $(MDRUN_PIN) \
+	    $(MDRUN_FLAGS)
 
 equilibrate: $(foreach r,$(REP_IDS),$(BUILD)/rep$(r)/npt.gro)
 
@@ -150,57 +177,60 @@ $(BUILD)/rep%/nvt.mdp: $(NVT_MDP)
 
 $(BUILD)/rep%/nvt.tpr: $(BUILD)/rep%/em.gro $(BUILD)/rep%/ions.top $(BUILD)/rep%/nvt.mdp
 	$(GMX) grompp \
-		-f $(@D)/nvt.mdp \
-		-c $< \
-		-r $< \
-		-p $(@D)/ions.top \
-	  	-o $@ \
-		-po $(@D)/mdout_nvt.mdp
+	    -f $(@D)/nvt.mdp \
+	    -c $< \
+	    -r $< \
+	    -p $(@D)/ions.top \
+	    -o $@ \
+	    -po $(@D)/mdout_nvt.mdp
 
 $(BUILD)/rep%/nvt.gro $(BUILD)/rep%/nvt.cpt &: $(BUILD)/rep%/nvt.tpr
 	cd $(@D) && $(GMX) mdrun \
 	    -s nvt.tpr \
-		-deffnm nvt \
-		$(MDRUN_FLAGS)
+	    -deffnm nvt \
+	    $(MDRUN_PIN) \
+	    $(MDRUN_FLAGS)
 
 $(BUILD)/rep%/npt.tpr: $(BUILD)/rep%/nvt.gro $(BUILD)/rep%/nvt.cpt $(BUILD)/rep%/ions.top $(NPT_MDP)
 	$(GMX) grompp \
 	    -f $(NPT_MDP) \
-		-c $< \
-		-r $< \
-		-t $(@D)/nvt.cpt \
+	    -c $< \
+	    -r $< \
+	    -t $(@D)/nvt.cpt \
 	    -p $(@D)/ions.top \
-		-o $@ \
-		-po $(@D)/mdout_npt.mdp
+	    -o $@ \
+	    -po $(@D)/mdout_npt.mdp
 
 $(BUILD)/rep%/npt.gro $(BUILD)/rep%/npt.cpt &: $(BUILD)/rep%/npt.tpr
 	cd $(@D) && $(GMX) mdrun \
 	    -s npt.tpr \
-		-deffnm npt \
-		$(MDRUN_FLAGS)
-
+	    -deffnm npt \
+	    $(MDRUN_PIN) \
+	    $(MDRUN_FLAGS)
 
 produce: $(foreach r,$(REP_IDS),$(BUILD)/rep$(r)/production.gro)
 
 $(BUILD)/rep%/production.tpr: $(BUILD)/rep%/npt.gro $(BUILD)/rep%/npt.cpt $(BUILD)/rep%/ions.top $(PROD_MDP)
 	$(GMX) grompp \
 	    -f $(PROD_MDP) \
-		-c $< \
-		-t $(@D)/npt.cpt \
+	    -c $< \
+	    -t $(@D)/npt.cpt \
 	    -p $(@D)/ions.top \
-		-o $@ \
-		-po $(@D)/mdout_production.mdp
+	    -o $@ \
+	    -po $(@D)/mdout_production.mdp
 
 $(addprefix $(BUILD)/rep%/production., gro xtc edr cpt) &: $(BUILD)/rep%/production.tpr
 	cd $(@D) && $(GMX) mdrun \
 	    -s production.tpr \
-		-deffnm production \
-		$(MDRUN_FLAGS)
+	    -deffnm production \
+	    $(MDRUN_PIN) \
+	    $(MDRUN_FLAGS)
 
-analyze: $(foreach r,$(REP_IDS),$(BUILD)/rep$(r)/analysis/summary.txt)
+analyse: $(foreach r,$(REP_IDS),$(BUILD)/rep$(r)/analysis/summary.txt)
 
-$(BUILD)/rep%/analysis/whole.xtc: $(BUILD)/rep%/production.xtc $(BUILD)/rep%/production.tpr
-	@mkdir -p $(@D)
+analyze: analyse
+
+$(BUILD)/rep%/analysis/whole.xtc: $(BUILD)/rep%/production.xtc $(BUILD)/rep%/production.tpr | $(BUILD)/rep%/analysis/.dir
 	printf 'Protein\nSystem\n' | $(GMX) trjconv \
 	    -f $< \
 	    -s $(BUILD)/rep$*/production.tpr \
