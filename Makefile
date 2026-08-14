@@ -15,10 +15,11 @@ MDRUN_FLAGS          ?=
 export GMX_MAXBACKUP := -1
 
 GMX_PIN     ?= on
+BIN_BASE    ?= 0
 PIN_STRIDE  ?= 1
 NCORES      ?= $(shell nproc --all)
 NT_PER_REP  := $(shell expr $(GMX_NT_MPI) \* $(GMX_NT_OMP))
-PINOFFSET    = $$(( ($* - 1) * $(NT_PER_REP) * $(PIN_STRIDE) ))
+PINOFFSET    = $$(( $(PIN_BASE) + ($* - 1) * $(NT_PER_REP) * $(PIN_STRIDE) ))
 
 ifeq ($(GMX_PIN),on)
 MDRUN_PIN = -ntmpi $(GMX_NT_MPI) -ntomp $(GMX_NT_OMP) \
