@@ -15,7 +15,7 @@ MDRUN_FLAGS          ?=
 export GMX_MAXBACKUP := -1
 
 GMX_PIN     ?= on
-BIN_BASE    ?= 0
+PIN_BASE    ?= 0
 PIN_STRIDE  ?= 1
 NCORES      ?= $(shell nproc --all)
 NT_PER_REP  := $(shell expr $(GMX_NT_MPI) \* $(GMX_NT_OMP))
