@@ -173,7 +173,7 @@ $(BUILD)/rep%/em.gro: $(BUILD)/rep%/em.tpr
 
 equilibrate: $(foreach r,$(REP_IDS),$(BUILD)/rep$(r)/npt.gro)
 
-$(BUILD)/rep%/nvt.mdp: $(NVT_MDP)
+$(BUILD)/rep%/nvt.mdp: $(NVT_MDP) | $(BUILD)/rep%/.dir
 	sed 's/@SEED@/$*/' $< > $@
 
 $(BUILD)/rep%/nvt.tpr: $(BUILD)/rep%/em.gro $(BUILD)/rep%/ions.top $(BUILD)/rep%/nvt.mdp
