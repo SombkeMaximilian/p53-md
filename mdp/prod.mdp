@@ -3,7 +3,7 @@
 
 integrator              = md
 dt                      = 0.002
-nsteps                  = 5000000 ; 10 ns
+nsteps                  = 10000000 ; 10 ns
 
 nstxout-compressed      = 5000 ; 10 ps
 compressed-x-grps       = System
