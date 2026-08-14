@@ -93,7 +93,7 @@ def build(seq, torsions, rng):
     for i, aa in enumerate(seq):
         geo = Geometry.geometry(aa)
         geo.phi = torsions[i][0]
-        # PeptideBuilder's psi_im1 is the psi of the PRECEDING residue, not this one
+        # PeptideBuilder's psi_im1 is the psi of the preceding residue
         geo.psi_im1 = torsions[i - 1][1] if i > 0 else torsions[0][1]
         geo.omega = 180.0
         set_chi1(geo, rng)

@@ -16,8 +16,7 @@ export GMX_MAXBACKUP := -1
 
 GMX_PIN     ?= on
 PIN_BASE    ?= 0
-PIN_STRIDE  ?= 0
-NCORES      ?= $(shell nproc --all)
+PIN_STRIDE  ?= 1
 NT_PER_REP  := $(shell expr $(GMX_NT_MPI) \* $(GMX_NT_OMP))
 PINOFFSET    = $$(( $(PIN_BASE) + ($* - 1) * $(NT_PER_REP) * $(PIN_STRIDE) ))
 
