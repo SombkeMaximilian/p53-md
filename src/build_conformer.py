@@ -81,9 +81,16 @@ def sample_torsions(seq, rng):
 def set_chi1(geo, rng):
     """Sets primary side-chain dihedral angle."""
 
-    for attr in dir(geo):
-        if attr.startswith("N_CA_CB_") and attr.endswith("_diangle"):
-            setattr(geo, attr, rng.choice(CHI1_ROTAMERS) + rng.gauss(0, 10))
+    if getattr(geo, "residue_name", None) == "P":
+        return
+    attrs = sorted(a for a in dir(geo)
+                    if a.startswith("N_CA_CB_") and a.endswith("_diangle"))
+    if not attrs:
+        return
+    ref = getattr(geo, attrs[0])
+    base = rng.choice(CHI1_ROTAMERS) + rng.gauss(0, 10)
+    for a in attrs:
+        setattr(geo, a, base + (getattr(geo, a) - ref))
 
 
 def build(seq, torsions, rng):
