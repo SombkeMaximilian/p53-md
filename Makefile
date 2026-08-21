@@ -44,6 +44,10 @@ REPS        ?= 2
 REP_IDS     := $(shell seq 1 $(REPS))
 PDB2GMX_OUT := topol.top init_conf.gro posre.itp clean.pdb
 
+TEMP     ?= 300
+ENSEMBLE ?= npt
+RUN      := T$(TEMP)-$(ENSEMBLE)
+
 BOXD        ?= 1.2
 BOXTYPE     ?= dodecahedron
 BOXVEC      ?=
@@ -57,13 +61,19 @@ BOX_L   = $(BOXVEC)
 BOX_DEP =
 endif
 
-CONC        ?= 0.15
-PNAME       ?= NA
-NNAME       ?= CL
-EM_MDP      := mdp/em.mdp
-NVT_MDP     := mdp/nvt.mdp
-NPT_MDP     := mdp/npt.mdp
-PROD_MDP    := mdp/prod.mdp
+CONC     ?= 0.15
+PNAME    ?= NA
+NNAME    ?= CL
+EM_MDP   := mdp/em.mdp
+NVT_MDP  := mdp/nvt.mdp
+NPT_MDP  := mdp/npt.mdp
+PROD_MDP := mdp/production.mdp
+ENS_MDP   = mdp/ensemble/$(ENSEMBLE).mdp
+
+ifeq ($(wildcard $(ENS_MDP)),)
+$(error unknown ENSEMBLE '$(ENSEMBLE)'; available: \
+    $(patsubst mdp/ensemble/%.mdp,%,$(wildcard mdp/ensemble/*.mdp)))
+endif
 
 ANALYSIS_SKIP ?= 0
 RVDW          ?= 1.0
@@ -230,68 +240,71 @@ $(BUILD)/rep%/npt.gro $(BUILD)/rep%/npt.cpt &: $(BUILD)/rep%/npt.tpr
 	    $(MDRUN_PIN) \
 	    $(MDRUN_FLAGS)
 
-produce: $(foreach r,$(REP_IDS),$(BUILD)/rep$(r)/production.gro)
+produce: $(foreach r,$(REP_IDS),$(BUILD)/rep$(r)/$(RUN)/production.gro)
 
-$(BUILD)/rep%/production.tpr: $(BUILD)/rep%/npt.gro $(BUILD)/rep%/npt.cpt $(BUILD)/rep%/ions.top $(PROD_MDP)
+$(BUILD)/rep%/$(RUN)/production.mdp: $(PROD_MDP) $(ENS_MDP) | $(BUILD)/rep%/$(RUN)/.dir
+	cat $(PROD_MDP) $(ENS_MDP) | sed 's/@TEMP@/$(TEMP)/g' > $@
+
+$(BUILD)/rep%/$(RUN)/production.tpr: $(BUILD)/rep%/npt.gro $(BUILD)/rep%/npt.cpt $(BUILD)/rep%/ions.top $(BUILD)/rep%/$(RUN)/production.mdp
 	$(GMX) grompp \
-	    -f $(PROD_MDP) \
+	    -f $(@D)/production.mdp \
 	    -c $< \
-	    -t $(@D)/npt.cpt \
-	    -p $(@D)/ions.top \
+		-t $(BUILD)/rep$*/npt.cpt \
+	    -p $(BUILD)/rep$*/ions.top \
 	    -o $@ \
 	    -po $(@D)/mdout_production.mdp
 
-$(addprefix $(BUILD)/rep%/production., gro xtc edr cpt) &: $(BUILD)/rep%/production.tpr
+$(addprefix $(BUILD)/rep%/$(RUN)/production., gro xtc edr cpt) &: $(BUILD)/rep%/$(RUN)/production.tpr
 	cd $(@D) && $(GMX) mdrun \
 	    -s production.tpr \
 	    -deffnm production \
 	    $(MDRUN_PIN) \
 	    $(MDRUN_FLAGS)
 
-analyse: $(foreach r,$(REP_IDS),$(BUILD)/rep$(r)/analysis/summary.txt)
+analyse: $(foreach r,$(REP_IDS),$(BUILD)/rep$(r)/$(RUN)/analysis/summary.txt)
 
 analyze: analyse
 
-$(BUILD)/rep%/analysis/whole.xtc: $(BUILD)/rep%/production.xtc $(BUILD)/rep%/production.tpr | $(BUILD)/rep%/analysis/.dir
+$(BUILD)/rep%/$(RUN)/analysis/whole.xtc: $(BUILD)/rep%/$(RUN)/production.xtc $(BUILD)/rep%/$(RUN)/production.tpr | $(BUILD)/rep%/$(RUN)/analysis/.dir
 	printf 'Protein\nSystem\n' | $(GMX) trjconv \
 	    -f $< \
-	    -s $(BUILD)/rep$*/production.tpr \
+	    -s $(BUILD)/rep$*/$(RUN)/production.tpr \
 	    -o $@ \
 	    -pbc mol \
 	    -center \
 	    -b $(ANALYSIS_SKIP)
 
-$(addprefix $(BUILD)/rep%/analysis/,$(ANALYSIS_OUT)) &: $(BUILD)/rep%/analysis/whole.xtc $(addprefix $(BUILD)/rep%/production., xtc edr tpr)
+$(addprefix $(BUILD)/rep%/$(RUN)/analysis/,$(ANALYSIS_OUT)) &: $(BUILD)/rep%/$(RUN)/analysis/whole.xtc $(addprefix $(BUILD)/rep%/$(RUN)/production., xtc edr tpr)
 	echo Protein | $(GMX) gyrate \
 	    -f $< \
-	    -s $(BUILD)/rep$*/production.tpr \
+	    -s $(BUILD)/rep$*/$(RUN)/production.tpr \
 	    -o $(@D)/gyrate.xvg
 	echo Protein | $(GMX) polystat \
 	    -f $< \
-	    -s $(BUILD)/rep$*/production.tpr \
+	    -s $(BUILD)/rep$*/$(RUN)/production.tpr \
 	    -o $(@D)/polystat.xvg
 	echo Protein | $(GMX) mindist \
-	    -f $(BUILD)/rep$*/production.xtc \
-	    -s $(BUILD)/rep$*/production.tpr \
+	    -f $(BUILD)/rep$*/$(RUN)/production.xtc \
+	    -s $(BUILD)/rep$*/$(RUN)/production.tpr \
 	    -pi \
 	    -od $(@D)/mindist.xvg \
 	    -b $(ANALYSIS_SKIP)
 	printf 'Temperature\nPressure\nVolume\nDensity\n\n' | $(GMX) energy \
-	    -f $(BUILD)/rep$*/production.edr \
+	    -f $(BUILD)/rep$*/$(RUN)/production.edr \
 	    -o $(@D)/energy.xvg \
 	    -b $(ANALYSIS_SKIP)
 	$(GMX) dssp \
 	    -f $< \
-	    -s $(BUILD)/rep$*/production.tpr \
+	    -s $(BUILD)/rep$*/$(RUN)/production.tpr \
 	    -o $(@D)/dssp.dat
 
-$(addprefix $(BUILD)/rep%/analysis/,$(RESULTS)) &: \
-		$(addprefix $(BUILD)/rep%/analysis/,$(ANALYSIS_OUT)) \
+$(addprefix $(BUILD)/rep%/$(RUN)/analysis/,$(RESULTS)) &: \
+		$(addprefix $(BUILD)/rep%/$(RUN)/analysis/,$(ANALYSIS_OUT)) \
 		src/analyze.py | $(VENV)/.stamp
 	$(PYTHON) src/analyze.py \
 	    --dir $(@D) \
 	    --outdir $(@D) \
-	    --title "p53 $(CONSTRUCT) rep$*" \
+	    --title "p53 $(CONSTRUCT) rep$* $(RUN)" \
 	    --rvdw $(RVDW) \
 	    --format $(PLOT_FMT)
 

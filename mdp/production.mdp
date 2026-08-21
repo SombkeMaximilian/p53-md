@@ -1,5 +1,5 @@
 ; Production MD
-; nsteps can be controlled via mdrun -nsteps
+; @TEMP@ is inserted by the Makefile
 
 integrator              = md
 dt                      = 0.002
@@ -33,12 +33,6 @@ DispCorr                = EnerPres
 tcoupl                  = V-rescale
 tc-grps                 = System
 tau-t                   = 1.0
-ref-t                   = 300
-
-pcoupl                  = Parrinello-Rahman
-pcoupltype              = isotropic
-tau-p                   = 2.0
-ref-p                   = 1.0
-compressibility         = 4.5e-5
+ref-t                   = @TEMP@
 
 gen-vel                 = no
