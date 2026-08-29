@@ -48,6 +48,17 @@ TEMP     ?= 300
 ENSEMBLE ?= npt
 RUN      := T$(TEMP)-$(ENSEMBLE)
 
+START_FROM ?=
+START_TEMP ?= $(TEMP)
+START_ENS  ?= $(ENSEMBLE)
+
+ifneq ($(strip $(START_FROM)),)
+START_RUN := T$(START_TEMP)-$(START_ENS)
+START_TAG ?= f$(subst $() ,_,$(strip $(START_FROM)))
+RUN       := $(RUN)-from-$(START_RUN)-$(START_TAG)
+FRAME      = $(word $*,$(START_FROM))
+endif
+
 BOXD        ?= 1.2
 BOXTYPE     ?= dodecahedron
 BOXVEC      ?=
@@ -185,55 +196,82 @@ $(BUILD)/rep%/ions.gro $(BUILD)/rep%/ions.top &: $(BUILD)/rep%/ions.tpr $(BUILD)
 	    -neutral \
 	    -conc $(CONC)
 
-minimize: $(foreach r,$(REP_IDS),$(BUILD)/rep$(r)/em.gro)
+minimize: $(foreach r,$(REP_IDS),$(BUILD)/rep$(r)/$(RUN)/em.gro)
 
-$(BUILD)/rep%/em.tpr: $(BUILD)/rep%/ions.gro $(BUILD)/rep%/ions.top $(EM_MDP)
+ifeq ($(strip $(START_FROM)),)
+
+$(BUILD)/rep%/$(RUN)/start.gro: $(BUILD)/rep%/ions.gro | $(BUILD)/rep%/$(RUN)/.dir
+	cp $< $@
+
+else
+
+$(BUILD)/rep%/$(RUN)/start.gro: $(BUILD)/rep%/$(START_RUN)/production.xtc $(BUILD)/rep%/$(START_RUN)/production.tpr $(BUILD)/rep%/$(RUN)/.dir
+	@test -n "$(FRAME)" \
+	  || { echo "START_FROM has no entry for rep$*" >&2; exit 1; }
+	read -r n tl dt < <($(GMX) check -f $< 2>&1 | awk \
+	    '/Last frame/ {n=$$3; t=$$5} $$1=="Time" && NF>=3 {dt=$$3} END {print n, t, dt}'); \
+	t=$$(awk -v tl=$$tl -v n=$$n -v dt=$$dt -v f=$(FRAME) \
+	        'BEGIN {printf "%.3f", tl - n*dt + f*dt}'); \
+	echo "rep$* frame $(FRAME) -> $$t ps (dt = $$dt ps)"; \
+	echo System | $(GMX) trjconv \
+	    -f $< \
+	    -s $(word 2,$^) \
+	    -dump $$t \
+	    -pbc whole \
+	    -o $@
+
+endif
+
+$(BUILD)/rep%/$(RUN)/em.tpr: $(BUILD)/rep%/$(RUN)/start.gro $(BUILD)/rep%/ions.top $(EM_MDP)
 	$(GMX) grompp \
 	    -f $(EM_MDP) \
 	    -c $< \
-	    -p $(@D)/ions.top \
+	    -p $(BUILD)/rep$*/ions.top \
 	    -o $@ \
 	    -po $(@D)/mdout_em.mdp
 
-$(BUILD)/rep%/em.gro: $(BUILD)/rep%/em.tpr
+$(BUILD)/rep%/$(RUN)/em.gro: $(BUILD)/rep%/$(RUN)/em.tpr
 	cd $(@D) && $(GMX) mdrun \
 	    -s em.tpr \
 	    -deffnm em \
 	    $(MDRUN_PIN) \
 	    $(MDRUN_FLAGS)
 
-equilibrate: $(foreach r,$(REP_IDS),$(BUILD)/rep$(r)/npt.gro)
+equilibrate: $(foreach r,$(REP_IDS),$(BUILD)/rep$(r)/$(RUN)/npt.gro)
 
-$(BUILD)/rep%/nvt.mdp: $(NVT_MDP) | $(BUILD)/rep%/.dir
-	sed 's/@SEED@/$*/' $< > $@
+$(BUILD)/rep%/$(RUN)/nvt.mdp: $(NVT_MDP) | $(BUILD)/rep%/$(RUN)/.dir
+	sed -e 's/@SEED@/$*/' -e 's/@TEMP@/$(TEMP)/g' $< > $@
 
-$(BUILD)/rep%/nvt.tpr: $(BUILD)/rep%/em.gro $(BUILD)/rep%/ions.top $(BUILD)/rep%/nvt.mdp
+$(BUILD)/rep%/$(RUN)/nvt.tpr: $(BUILD)/rep%/$(RUN)/em.gro $(BUILD)/rep%/ions.top $(BUILD)/rep%/$(RUN)/nvt.mdp
 	$(GMX) grompp \
 	    -f $(@D)/nvt.mdp \
 	    -c $< \
 	    -r $< \
-	    -p $(@D)/ions.top \
+	    -p $(BUILD)/rep$*/ions.top \
 	    -o $@ \
 	    -po $(@D)/mdout_nvt.mdp
 
-$(BUILD)/rep%/nvt.gro $(BUILD)/rep%/nvt.cpt &: $(BUILD)/rep%/nvt.tpr
+$(BUILD)/rep%/$(RUN)/nvt.gro $(BUILD)/rep%/$(RUN)/nvt.cpt &: $(BUILD)/rep%/$(RUN)/nvt.tpr
 	cd $(@D) && $(GMX) mdrun \
 	    -s nvt.tpr \
 	    -deffnm nvt \
 	    $(MDRUN_PIN) \
 	    $(MDRUN_FLAGS)
 
-$(BUILD)/rep%/npt.tpr: $(BUILD)/rep%/nvt.gro $(BUILD)/rep%/nvt.cpt $(BUILD)/rep%/ions.top $(NPT_MDP)
+$(BUILD)/rep%/$(RUN)/npt.mdp: $(NPT_MDP) | $(BUILD)/rep%/$(RUN)/.dir
+	sed 's/@TEMP@/$(TEMP)/g' $< > $@
+
+$(BUILD)/rep%/$(RUN)/npt.tpr: $(BUILD)/rep%/$(RUN)/nvt.gro $(BUILD)/rep%/$(RUN)/nvt.cpt $(BUILD)/rep%/ions.top $(BUILD)/rep%/$(RUN)/npt.mdp
 	$(GMX) grompp \
-	    -f $(NPT_MDP) \
+	    -f $(@D)/npt.mdp \
 	    -c $< \
 	    -r $< \
 	    -t $(@D)/nvt.cpt \
-	    -p $(@D)/ions.top \
+	    -p $(BUILD)/rep$*/ions.top \
 	    -o $@ \
 	    -po $(@D)/mdout_npt.mdp
 
-$(BUILD)/rep%/npt.gro $(BUILD)/rep%/npt.cpt &: $(BUILD)/rep%/npt.tpr
+$(BUILD)/rep%/$(RUN)/npt.gro $(BUILD)/rep%/$(RUN)/npt.cpt &: $(BUILD)/rep%/$(RUN)/npt.tpr
 	cd $(@D) && $(GMX) mdrun \
 	    -s npt.tpr \
 	    -deffnm npt \
@@ -245,11 +283,11 @@ produce: $(foreach r,$(REP_IDS),$(BUILD)/rep$(r)/$(RUN)/production.gro)
 $(BUILD)/rep%/$(RUN)/production.mdp: $(PROD_MDP) $(ENS_MDP) | $(BUILD)/rep%/$(RUN)/.dir
 	cat $(PROD_MDP) $(ENS_MDP) | sed 's/@TEMP@/$(TEMP)/g' > $@
 
-$(BUILD)/rep%/$(RUN)/production.tpr: $(BUILD)/rep%/npt.gro $(BUILD)/rep%/npt.cpt $(BUILD)/rep%/ions.top $(BUILD)/rep%/$(RUN)/production.mdp
+$(BUILD)/rep%/$(RUN)/production.tpr: $(BUILD)/rep%/$(RUN)/npt.gro $(BUILD)/rep%/$(RUN)/npt.cpt $(BUILD)/rep%/ions.top $(BUILD)/rep%/$(RUN)/production.mdp
 	$(GMX) grompp \
 	    -f $(@D)/production.mdp \
 	    -c $< \
-		-t $(BUILD)/rep$*/npt.cpt \
+	    -t $(@D)/npt.cpt \
 	    -p $(BUILD)/rep$*/ions.top \
 	    -o $@ \
 	    -po $(@D)/mdout_production.mdp

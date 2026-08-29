@@ -33,10 +33,10 @@ DispCorr                = EnerPres
 tcoupl                  = V-rescale
 tc-grps                 = System
 tau-t                   = 0.1
-ref-t                   = 300
+ref-t                   = @TEMP@
 
 pcoupl                  = no
 
 gen-vel                 = yes
-gen-temp                = 300
+gen-temp                = @TEMP@
 gen-seed                = @SEED@
