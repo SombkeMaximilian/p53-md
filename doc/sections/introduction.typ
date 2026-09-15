@@ -1,5 +1,3 @@
-#import "../utilities.typ": TODO, flex-caption, unnumbered_eq
-
 = Introduction <intro>
 
 A large fraction fraction of the eukaryotic proteome consists of proteins with stable three-dimensional folded structures. However, a significant portion of proteins, known as intrinsically disordered proteins (IDPs), do not adapt a single stable structure. Instead, IDPs exist as an ensemble of conformations that are highly dynamic and flexible. It is estimated that approximately 33% of the eukaryotic proteome consists of IDPs or proteins containing intrinsically disordered regions (IDRs) longer than 30 residues @Trivedi2022.
