@@ -48,7 +48,12 @@
   show figure: set block(inset: (top: 0.5em, bottom: 0.5em))
   show figure.caption: box.with(width: 95%)
 
-  set heading(numbering: "1.1")
+  set heading(numbering: (..nums) => {
+    let heading_num = nums.pos().map(str).join(".")
+    let suffix = if "." in heading_num { "" } else { "." }
+
+    heading_num + suffix
+  })
   show heading: set block(below: 0.8em, above: 1.5em)
   show heading: set text(font: font)
 
