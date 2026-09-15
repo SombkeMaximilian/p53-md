@@ -2,10 +2,8 @@
 
 = Introduction <intro>
 
-#TODO[
-  - protein structure generally stable
-  - IDPs ensemble of conformations without stable structure
-  - many members of the proteome are IDPs or contain IDRs ($tilde 40%$)
-  - cellular tumor antigen p53 is a transcription factor and tumor suppressor
-  - N-terminal domain contains disordered TADs for binding to MDM2, etc.
-]
+A large fraction fraction of the eukaryotic proteome consists of proteins with stable three-dimensional folded structures. However, a significant portion of proteins, known as intrinsically disordered proteins (IDPs), do not adapt a single stable structure. Instead, IDPs exist as an ensemble of conformations that are highly dynamic and flexible. It is estimated that approximately 33% of the eukaryotic proteome consists of IDPs or proteins containing intrinsically disordered regions (IDRs) longer than 30 residues @Trivedi2022.
+
+The cellular tumor antigen p53 proteins are transcription factors and tumor suppressors that play a key role in regulating cell cycle progression, cell apoptosis, and DNA repair. The canonical, full-length isoform of p53 is a 393-residue protein known as p53#sym.alpha. Its 93-residue N-terminal domain is an IDR containing two transactivation domains (TADs). These TADs are responsible for binding to various proteins involved in the regulation of various pathways, for example, the E3 ubiquitin-protein ligase MDM2 @Prives1998.
+
+Molecular dynamics (MD) simulations can be used to explore the conformational space of IDPs and IDRs. In this work, several MD simulations were performed to investigate the behavior of the first 55 residues of the N-terminal domain of p53. This region contains the entire first TAD subdomain (TAD1), and a subregion of the second TAD subdomain (TAD2), which has been shown to contain a transient helical structure @Raj2016.
