@@ -1,15 +1,7 @@
-#import "../utilities.typ": TODO
-
 = Methods <methods>
 
-#TODO[
-  - robustelli et al amber forcefield and modified water @Robustelli2018
-  - p53 alpha sequence from uniprot @uniprot
-  - build random coil conformers with PeptideBuilder @Tien2013
-  - generate topology and coordinate files with pdb2gmx @Abraham2015
-  - solvate in a dodecahedron box with TIP3P water and neutralize with Na+ and Cl- ions
-  - energy minimization with steepest descent algorithm
-  - equilibrate with NVT and NPT ensembles
-  - production runs: NPT at 300 K, NVT at 600 K, NPT at 300 K starting from helical conformations in the 600 K runs (maybe also mention other parameters)
-  - visual molecular dynamics (VMD) for visualization and analysis @Humphrey1996
-]
+A force field that can accurately capture both the disordered ensemble and any transient secondary structure is required to study the conformational behavior of IDPs and IDRs. This is particularly relevant for the N-terminal domain of p53#sym.alpha, which contains transient helical structures within TAD1 and TAD2 @Raj2016. The Amber ff99SB-disp force field and companion TIP4P-D-like water model TIP4P-disp, developed by @Robustelli2018, were parametrized to perform well for both folded and disordered proteins, and were therefore used for all simulations in this work.
+
+The initial structure of the first 55-residue construct was obtained by generating random coil conformation replicas using the PeptideBuilder Python package @Tien2013 on the basis of the amino acid sequence of p53#sym.alpha obtained from UniProt @uniprot. These replicas were then used to create topology and coordinate files using the pdb2gmx tool in GROMACS @Abraham2015, and finally solvated in a dodecahedron box with TIP4P-disp water molecules and neutralized with Na$#super[+]$ and Cl$#super[-]$ ions. Standard energy minimization was performed using the steepest descent algorithm, followed by equilibration in the NVT and NPT ensembles.
+
+Production runs were performed in the NPT ensemble at 300 K, as well as in the NVT ensemble at 600 K to sample a wider range of conformations. Additionally, production runs were performed in the NPT ensemble at 300 K starting from helical conformations at the sites of interest, obtained from the 600 K runs. All simulations were performed using GROMACS @Abraham2015, and visual molecular dynamics (VMD) @Humphrey1996 was used for visualization and final analysis of the simulation trajectories.
