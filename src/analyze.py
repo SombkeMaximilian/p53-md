@@ -123,8 +123,10 @@ class PlotConfig:
     )
 
     def __init__(self, indir, outdir, fmt, dpi, title):
-        self.indir, self.outdir = indir, outdir
-        self.fmt, self.dpi, self.title = fmt, dpi, title
+        self.indir = indir
+        self.outdir = outdir
+        self.fmt = fmt
+        self.dpi = dpi
         self.report = [f"# {title}", ""]
         self.written = []
 
@@ -139,7 +141,6 @@ class PlotConfig:
     def save(self, fig, ax, stem, xlabel, ylabel):
         ax.set_xlabel(xlabel)
         ax.set_ylabel(ylabel)
-        ax.set_title(self.title, fontsize=9)
         fig.tight_layout()
         path = os.path.join(self.outdir, f"{stem}.{self.fmt}")
         fig.savefig(path, dpi=self.dpi)
