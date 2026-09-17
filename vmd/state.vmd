@@ -296,7 +296,7 @@ display dof off
 display dof_fnumber 64.000000
 display dof_focaldist 0.700000
 mol new production.gro type gro first 0 last -1 step 1 filebonds 1 autobonds 1 waitfor all
-mol addfile {/Volumes/NO NAME/build/a99SBdisp/a99SBdisp_water/1-55/rep1/T600-nvt/analysis/whole.xtc} type xtc first 0 last -1 step 1 filebonds 1 autobonds 1 waitfor all
+mol addfile {analysis/whole.xtc} type xtc first 0 last -1 step 1 filebonds 1 autobonds 1 waitfor all
 mol delrep 0 top
 mol representation NewCartoon 0.300000 10.000000 4.100000 0
 mol color Name
