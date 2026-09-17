@@ -244,10 +244,7 @@ def main():
         "C5",
     )
     p.timeseries("energy.xvg", "pres", "Pressure", "P (bar)", "pressure", "bar", "C6")
-    dssp_path = p.infile("dssp.dat")
-    if dssp_path:
-        _, _, ss_matrix = read_dssp(dssp_path)
-        p.timeline(ss_matrix, "dssp")
+    p.timeline(read_dssp(p.infile("dssp.dat"))[2], "dssp")
     p.finish()
 
 
