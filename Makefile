@@ -90,7 +90,7 @@ ANALYSIS_SKIP ?= 0
 RVDW          ?= 1.0
 PLOT_FMT      ?= svg
 ANALYSIS_OUT  := gyrate.xvg polystat.xvg mindist.xvg energy.xvg dssp.dat
-PLOTS         := rg e2e mindist temp dens pres
+PLOTS         := rg e2e mindist temp dens pres dssp
 RESULTS       := $(addsuffix .$(PLOT_FMT),$(PLOTS)) summary.txt
 
 .PHONY: setup \

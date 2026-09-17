@@ -14,6 +14,7 @@ matplotlib.use("Agg")
 
 import matplotlib.pyplot as plt
 import numpy as np
+from matplotlib.colors import BoundaryNorm, ListedColormap
 
 HELIX = set("HGI")
 FIGSIZE = (8, 6)
@@ -67,7 +68,7 @@ def block_stats(y, nblocks=5):
 
 
 def read_dssp(path):
-    """Returns (per-residue helical fraction, n_frames) from a gmx dssp .dat file."""
+    """Returns (per-residue helical fraction, n_frames, full SS matrix [residue, frame])."""
 
     frames = []
     with open(path) as fh:
@@ -80,10 +81,47 @@ def read_dssp(path):
     width = min(len(f) for f in frames)
     arr = np.array([[c in HELIX for c in f[:width]] for f in frames])
 
-    return arr.mean(axis=0), len(frames)
+    code_map = {
+        "H": 0,
+        "G": 1,
+        "I": 2,
+        "E": 3,
+        "B": 4,
+        "T": 5,
+        "S": 6,
+        "~": 7,
+        "C": 7,
+        " ": 7,
+    }
+    ss_matrix = np.array([[code_map.get(c, 7) for c in f[:width]] for f in frames]).T
+
+    return arr.mean(axis=0), len(frames), ss_matrix
 
 
 class PlotConfig:
+    SS_LABELS = (
+        "α-Helix",
+        "3-10",
+        "π-Helix",
+        "β-Strand",
+        "β-Bridge",
+        "Turn",
+        "Bend",
+        "Coil",
+    )
+    SS_COLORS = ListedColormap(
+        [
+            "#3498db",
+            "#9b59b6",
+            "#1abc9c",
+            "#e74c3c",
+            "#e67e22",
+            "#f1c40f",
+            "#95a5a6",
+            "#ecf0f1",
+        ]
+    )
+
     def __init__(self, indir, outdir, fmt, dpi, title):
         self.indir, self.outdir = indir, outdir
         self.fmt, self.dpi, self.title = fmt, dpi, title
@@ -92,6 +130,7 @@ class PlotConfig:
 
     def infile(self, name):
         p = os.path.join(self.indir, name)
+
         return p if os.path.exists(p) else None
 
     def note(self, label, mean, sem, unit):
@@ -133,6 +172,22 @@ class PlotConfig:
         else:
             self.note(label, m, s, unit)
         self.save(fig, ax, stem, "time (ns)", ylabel)
+
+    def timeline(self, ss_matrix, stem):
+        norm = BoundaryNorm(np.linspace(-0.5, 7.5, num=9), self.SS_COLORS.N)
+
+        fig, ax = plt.subplots(figsize=FIGSIZE)
+        im = ax.imshow(
+            ss_matrix,
+            aspect="auto",
+            interpolation="none",
+            cmap=self.SS_COLORS,
+            norm=norm,
+            origin="lower"
+        )
+        cbar = fig.colorbar(im, ax=ax, ticks=range(8))
+        cbar.ax.set_yticklabels(self.SS_LABELS)
+        self.save(fig, ax, stem, "frame", "residue")
 
     def finish(self):
         path = os.path.join(self.outdir, "summary.txt")
@@ -189,6 +244,10 @@ def main():
         "C5",
     )
     p.timeseries("energy.xvg", "pres", "Pressure", "P (bar)", "pressure", "bar", "C6")
+    dssp_path = p.infile("dssp.dat")
+    if dssp_path:
+        _, _, ss_matrix = read_dssp(dssp_path)
+        p.timeline(ss_matrix, "dssp")
     p.finish()
 
 
