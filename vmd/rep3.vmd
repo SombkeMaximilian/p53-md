@@ -1,13 +1,13 @@
 #!/usr/local/bin/vmd
 # VMD script written by save_state $Revision: 1.48 $
-# VMD version: 1.9.4a57
+# VMD version: 2.0.0
 set viewplist {}
 set fixedlist {}
 proc vmdrestoremymaterials {} {
   set mlist { Opaque Transparent BrushedMetal Diffuse Ghost Glass1 Glass2 Glass3 Glossy HardPlastic MetallicPastel Steel Translucent Edgy EdgyShiny EdgyGlass Goodsell AOShiny AOChalky AOEdgy BlownGlass GlassBubble RTChrome }
   set mymlist [material list]
   foreach mat $mlist {
-    if { [lsearch $mymlist $mat] == -1 } {
+    if { [lsearch $mymlist $mat] == -1 } { 
       material add $mat
     }
   }
@@ -158,7 +158,7 @@ proc vmdrestoremymaterials {} {
   material change ambient Goodsell 0.520000
   material change diffuse Goodsell 1.000000
   material change specular Goodsell 0.000000
-  material change shininess Goodsell -0.000000
+  material change shininess Goodsell 0.000000
   material change mirror Goodsell 0.000000
   material change opacity Goodsell 1.000000
   material change outline Goodsell 4.000000
@@ -250,7 +250,6 @@ atomselect macro ion {resname AL BA CA CAL CD CES CLA CL CO CS CU CU1 CUA HG IN 
 atomselect macro ions ion
 atomselect macro sugar {resname AGLC}
 atomselect macro solvent {not (protein or sugar or nucleic or lipid)}
-atomselect macro glycan {resname NAG BGLN FUC AFUC MAN AMAN BMA BMAN}
 atomselect macro carbon {name "C.*" and not ion}
 atomselect macro hydrogen {name "[0-9]?H.*"}
 atomselect macro nitrogen {name "N.*"}
@@ -278,10 +277,10 @@ display eyesep       0.065000
 display focallength  2.000000
 display height       6.000000
 display distance     -2.000000
-display projection   Orthographic
-display nearclip set 0.010000
+display projection   Perspective
+display nearclip set 0.500000
 display farclip  set 10.000000
-display depthcue   off
+display depthcue   on
 display cuestart   0.500000
 display cueend     10.000000
 display cuestart   0.500000
@@ -295,16 +294,16 @@ display aodirect 0.300000
 display dof off
 display dof_fnumber 64.000000
 display dof_focaldist 0.700000
-mol new production.gro type gro first 0 last -1 step 1 filebonds 1 autobonds 1 waitfor all
-mol addfile {analysis/whole.xtc} type xtc first 0 last -1 step 1 filebonds 1 autobonds 1 waitfor all
+mol new build/a99SBdisp/a99SBdisp_water/1-55/rep3/T300-npt-from-T600-nvt-f1823_1439_1753_1843/production.gro type gro first 0 last -1 step 1 filebonds 1 autobonds 1 waitfor all
+mol addfile build/a99SBdisp/a99SBdisp_water/1-55/rep3/T300-npt-from-T600-nvt-f1823_1439_1753_1843/analysis/whole.xtc type xtc first 0 last -1 step 1 filebonds 1 autobonds 1 waitfor all
 mol delrep 0 top
-mol representation NewCartoon 0.300000 10.000000 4.100000 0
+mol representation NewCartoon 0.300000 10.000000 4.100000 0 0
 mol color Name
-mol selection {all}
+mol selection {protein}
 mol material Opaque
 mol addrep top
-mol selupdate 0 top 0
-mol colupdate 0 top 0
+mol selupdate 0 top 1
+mol colupdate 0 top 1
 mol scaleminmax top 0 0.000000 0.000000
 mol smoothrep top 0 0
 mol drawframes top 0 {now}
@@ -332,13 +331,13 @@ mol clipplane center 5 0 top {0.0 0.0 0.0}
 mol clipplane color  5 0 top {0.5 0.5 0.5 }
 mol clipplane normal 5 0 top {0.0 0.0 1.0}
 mol clipplane status 5 0 top {0}
-mol representation Licorice 0.4 10 10
-mol color ColorID name
-mol selection {none}
+mol representation Lines 1.000000
+mol color Name
+mol selection {protein and resid > 45 and resid < 56}
 mol material Opaque
 mol addrep top
-mol selupdate 1 top 0
-mol colupdate 1 top 0
+mol selupdate 1 top 1
+mol colupdate 1 top 1
 mol scaleminmax top 1 0.000000 0.000000
 mol smoothrep top 1 0
 mol drawframes top 1 {now}
@@ -366,13 +365,13 @@ mol clipplane center 5 1 top {0.0 0.0 0.0}
 mol clipplane color  5 1 top {0.5 0.5 0.5 }
 mol clipplane normal 5 1 top {0.0 0.0 1.0}
 mol clipplane status 5 1 top {0}
-mol representation Lines 5.000000
+mol representation Lines 1.000000
 mol color Name
-mol selection {not water}
+mol selection {same resid as resname SOL and within 3 of resid > 45 and resid < 56}
 mol material Opaque
 mol addrep top
-mol selupdate 2 top 0
-mol colupdate 2 top 0
+mol selupdate 2 top 1
+mol colupdate 2 top 1
 mol scaleminmax top 2 0.000000 0.000000
 mol smoothrep top 2 0
 mol drawframes top 2 {now}
@@ -401,12 +400,12 @@ mol clipplane color  5 2 top {0.5 0.5 0.5 }
 mol clipplane normal 5 2 top {0.0 0.0 1.0}
 mol clipplane status 5 2 top {0}
 mol representation HBonds 3.700000 35.000000 12.000000
-mol color ColorID 1
-mol selection {not water}
+mol color ColorID 25
+mol selection {protein or resname SOL and within 3 of resid > 45 and resid < 56}
 mol material Opaque
 mol addrep top
 mol selupdate 3 top 1
-mol colupdate 3 top 0
+mol colupdate 3 top 1
 mol scaleminmax top 3 0.000000 0.000000
 mol smoothrep top 3 0
 mol drawframes top 3 {now}
@@ -434,13 +433,13 @@ mol clipplane center 5 3 top {0.0 0.0 0.0}
 mol clipplane color  5 3 top {0.5 0.5 0.5 }
 mol clipplane normal 5 3 top {0.0 0.0 1.0}
 mol clipplane status 5 3 top {0}
-mol representation Licorice 0.100000 10.000000 10.000000
-mol color Type
-mol selection {same resid as resname SOL and within 4 of resid  > 17 and resid < 28}
+mol representation HBonds 3.700000 35.000000 12.000000
+mol color ColorID 21
+mol selection {resname SOL and within 3 of resid > 45 and resid < 56}
 mol material Opaque
 mol addrep top
 mol selupdate 4 top 1
-mol colupdate 4 top 0
+mol colupdate 4 top 1
 mol scaleminmax top 4 0.000000 0.000000
 mol smoothrep top 4 0
 mol drawframes top 4 {now}
@@ -469,12 +468,12 @@ mol clipplane color  5 4 top {0.5 0.5 0.5 }
 mol clipplane normal 5 4 top {0.0 0.0 1.0}
 mol clipplane status 5 4 top {0}
 mol representation HBonds 3.700000 35.000000 12.000000
-mol color Type
-mol selection {not water or same resid as resname SOL and within 4 of resid > 17 and resid < 28}
+mol color ColorID 27
+mol selection {protein and resid > 45 and resid < 56}
 mol material Opaque
 mol addrep top
 mol selupdate 5 top 1
-mol colupdate 5 top 0
+mol colupdate 5 top 1
 mol scaleminmax top 5 0.000000 0.000000
 mol smoothrep top 5 0
 mol drawframes top 5 {now}
@@ -502,76 +501,8 @@ mol clipplane center 5 5 top {0.0 0.0 0.0}
 mol clipplane color  5 5 top {0.5 0.5 0.5 }
 mol clipplane normal 5 5 top {0.0 0.0 1.0}
 mol clipplane status 5 5 top {0}
-mol representation HBonds 3.700000 35.000000 12.000000
-mol color Type
-mol selection {not water or same resid as resname SOL and within 4 of resid > 17 and resid < 28}
-mol material Opaque
-mol addrep top
-mol selupdate 6 top 0
-mol colupdate 6 top 0
-mol scaleminmax top 6 0.000000 0.000000
-mol smoothrep top 6 0
-mol drawframes top 6 {now}
-mol clipplane center 0 6 top {0.0 0.0 0.0}
-mol clipplane color  0 6 top {0.5 0.5 0.5 }
-mol clipplane normal 0 6 top {0.0 0.0 1.0}
-mol clipplane status 0 6 top {0}
-mol clipplane center 1 6 top {0.0 0.0 0.0}
-mol clipplane color  1 6 top {0.5 0.5 0.5 }
-mol clipplane normal 1 6 top {0.0 0.0 1.0}
-mol clipplane status 1 6 top {0}
-mol clipplane center 2 6 top {0.0 0.0 0.0}
-mol clipplane color  2 6 top {0.5 0.5 0.5 }
-mol clipplane normal 2 6 top {0.0 0.0 1.0}
-mol clipplane status 2 6 top {0}
-mol clipplane center 3 6 top {0.0 0.0 0.0}
-mol clipplane color  3 6 top {0.5 0.5 0.5 }
-mol clipplane normal 3 6 top {0.0 0.0 1.0}
-mol clipplane status 3 6 top {0}
-mol clipplane center 4 6 top {0.0 0.0 0.0}
-mol clipplane color  4 6 top {0.5 0.5 0.5 }
-mol clipplane normal 4 6 top {0.0 0.0 1.0}
-mol clipplane status 4 6 top {0}
-mol clipplane center 5 6 top {0.0 0.0 0.0}
-mol clipplane color  5 6 top {0.5 0.5 0.5 }
-mol clipplane normal 5 6 top {0.0 0.0 1.0}
-mol clipplane status 5 6 top {0}
-mol representation HBonds 3.700000 35.000000 12.000000
-mol color ColorID 27
-mol selection {same resid as resname SOL and within 4 of resid > 17 and resid < 28}
-mol material Opaque
-mol addrep top
-mol selupdate 7 top 0
-mol colupdate 7 top 0
-mol scaleminmax top 7 0.000000 0.000000
-mol smoothrep top 7 0
-mol drawframes top 7 {now}
-mol clipplane center 0 7 top {0.0 0.0 0.0}
-mol clipplane color  0 7 top {0.5 0.5 0.5 }
-mol clipplane normal 0 7 top {0.0 0.0 1.0}
-mol clipplane status 0 7 top {0}
-mol clipplane center 1 7 top {0.0 0.0 0.0}
-mol clipplane color  1 7 top {0.5 0.5 0.5 }
-mol clipplane normal 1 7 top {0.0 0.0 1.0}
-mol clipplane status 1 7 top {0}
-mol clipplane center 2 7 top {0.0 0.0 0.0}
-mol clipplane color  2 7 top {0.5 0.5 0.5 }
-mol clipplane normal 2 7 top {0.0 0.0 1.0}
-mol clipplane status 2 7 top {0}
-mol clipplane center 3 7 top {0.0 0.0 0.0}
-mol clipplane color  3 7 top {0.5 0.5 0.5 }
-mol clipplane normal 3 7 top {0.0 0.0 1.0}
-mol clipplane status 3 7 top {0}
-mol clipplane center 4 7 top {0.0 0.0 0.0}
-mol clipplane color  4 7 top {0.5 0.5 0.5 }
-mol clipplane normal 4 7 top {0.0 0.0 1.0}
-mol clipplane status 4 7 top {0}
-mol clipplane center 5 7 top {0.0 0.0 0.0}
-mol clipplane color  5 7 top {0.5 0.5 0.5 }
-mol clipplane normal 5 7 top {0.0 0.0 1.0}
-mol clipplane status 5 7 top {0}
 mol rename top production.gro
-set viewpoints([molinfo top]) {{{1 0 0 -85.23} {0 1 0 -79.74} {0 0 1 -43.35} {0 0 0 1}} {{0.285943 -0.834159 0.471368 0} {0.59911 -0.228248 -0.767307 0} {0.747712 0.501848 0.434498 0} {0 0 0 1}} {{0.174167 0 0 0} {0 0.174167 0 0} {0 0 0.174167 0} {0 0 0 1}} {{1 0 0 0.0708895} {0 1 0 0.345671} {0 0 1 -6.37513} {0 0 0 1}}}
+set viewpoints([molinfo top]) {{{1 0 0 -48.47} {0 1 0 -92.02} {0 0 1 -49.9} {0 0 0 1}} {{0.69882 -0.578509 0.420649 0} {0.687054 0.706471 -0.169774 0} {-0.198971 0.407652 0.891163 0} {0 0 0 1}} {{0.0311927 0 0 0} {0 0.0311927 0 0} {0 0 0.0311927 0} {0 0 0 1}} {{1 0 0 -0.228545} {0 1 0 -0.0794995} {0 0 1 1.221} {0 0 0 1}}}
 lappend viewplist [molinfo top]
 set topmol [molinfo top]
 # done with molecule 0
@@ -625,12 +556,14 @@ color scale colors CET_R2 {0.0 0.0 0.0} {0.0 0.0 0.0} {0.0 0.0 0.0}
   color scale method RWB
   set colorcmds {
     {color Display {Background} white}
-    {color Display {BackgroundTop} black}
-    {color Display {BackgroundBot} blue2}
+    {color Display {BackgroundTop} gray}
+    {color Display {BackgroundBot} black}
     {color Display {FPS} white}
+    {color Name {C} gray}
     {color Name {LPA} green}
     {color Name {LPB} green}
     {color Name {M} pink}
+    {color Type {C} gray}
     {color Type {LP} green}
     {color Type {DRUD} pink}
     {color Type {M} pink}
@@ -744,6 +677,7 @@ color scale colors CET_R2 {0.0 0.0 0.0} {0.0 0.0 0.0} {0.0 0.0 0.0}
     {color Segname {} blue}
     {color Conformation {all} blue}
     {color Molecule {0} blue}
+    {color Molecule {production.gro} blue}
     {color Structure {3_10_Helix} blue}
     {color Surface {Grasp} gray}
     {color Labels {Springs} orange}
